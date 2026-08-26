@@ -1,3 +1,8 @@
+# Its own workspace root. Without this, cargo run from inside this repository
+# walks up, finds Xmip/Cargo.toml and refuses — a module that only builds
+# inside its parent is not an independent repository.
+[workspace]
+
 [package]
 name = "xmip-journey"
 version = "0.1.0"
