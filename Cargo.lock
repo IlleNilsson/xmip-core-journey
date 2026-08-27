@@ -190,13 +190,13 @@ dependencies = [
 [[package]]
 name = "xmip-core"
 version = "0.1.0"
-source = "git+https://github.com/IlleNilsson/xmip-core?rev=9adfd1eb4a6a3b5a6b0b6ea9b3a1fb288b41c8fc#9adfd1eb4a6a3b5a6b0b6ea9b3a1fb288b41c8fc"
+source = "git+https://github.com/IlleNilsson/xmip-core?branch=main#ac579cd3804804ff47cff79b96157d817ed059c5"
 dependencies = [
  "uuid",
 ]
 
 [[package]]
-name = "xmip-journey"
+name = "xmip-core-journey"
 version = "0.1.0"
 dependencies = [
  "xmip-core",
