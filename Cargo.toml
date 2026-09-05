@@ -12,4 +12,4 @@ repository = "https://github.com/IlleNilsson/xmip-core-journey"
 description = "Journey state, lineage and append-only execution history for Xmip."
 
 [dependencies]
-xmip-core = { git = "https://github.com/IlleNilsson/xmip-core", branch = "main" }
+xcore = { package = "xmip-core", git = "https://github.com/IlleNilsson/xmip-core", branch = "main" }

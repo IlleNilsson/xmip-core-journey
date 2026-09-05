@@ -18,7 +18,7 @@
 
 use core::fmt;
 
-use xmip_core::JourneyId;
+use xcore::JourneyId;
 
 /// How deep a publication chain may run.
 ///

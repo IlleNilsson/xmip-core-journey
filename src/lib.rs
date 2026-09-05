@@ -11,7 +11,7 @@ pub mod chain;
 
 pub use chain::{ChainCause, ChainLimit, ChainRefused};
 
-use xmip_core::{ExecutionId, JourneyId, MessageId, StreamId};
+use xcore::{ExecutionId, JourneyId, MessageId, StreamId};
 
 /// The operational state of a Journey.
 ///
