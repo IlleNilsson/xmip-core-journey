@@ -11,6 +11,7 @@ pub mod chain;
 
 pub use chain::{ChainCause, ChainLimit, ChainRefused};
 
+use serde::{Deserialize, Serialize};
 use xcore::{ExecutionId, JourneyId, MessageId, StreamId};
 
 /// The operational state of a Journey.
@@ -26,7 +27,11 @@ use xcore::{ExecutionId, JourneyId, MessageId, StreamId};
 /// `Paused`, `Dead` — which `runtime-model.md` section 23 retired. `Created`
 /// has no successor on purpose: a Journey exists only after Validation, so
 /// there is nothing for it to be created in.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+///
+/// Serialised in kebab-case, the form `xmip-core-persist` wrote for its own
+/// copy of the first six variants until 2026-09-14 (ADR-0044).
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
 pub enum JourneyState {
     Active,
     Waiting,
