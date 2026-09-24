@@ -64,7 +64,7 @@ impl JourneyState {
 }
 
 /// One thing that happened, in order.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct JourneyEntry {
     pub execution_id: ExecutionId,
     pub message_id: MessageId,
@@ -74,7 +74,7 @@ pub struct JourneyEntry {
 }
 
 /// One Message generation this Journey has held.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct JourneyMessageRef {
     pub message_id: MessageId,
     pub stream_id: StreamId,
@@ -85,7 +85,12 @@ pub struct JourneyMessageRef {
 /// A Journey accumulates: entries, Message generations, state transitions. Its
 /// historical record is appended to and never rewritten. The Streams it refers
 /// to never change at all.
-#[derive(Clone, Debug, Eq, PartialEq)]
+///
+/// Serialisable because it is what `xmip-core-persist` writes down, whole: a
+/// cut-down copy there dropped the chain and the entries until 2026-09-23, so a
+/// recovered Journey restarted its depth at zero and the chain limit forgot
+/// every link before the restart (open-problems.md, problem 25, row a).
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct Journey {
     pub journey_id: JourneyId,
 
