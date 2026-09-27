@@ -90,9 +90,15 @@ pub struct JourneyMessageRef {
 /// cut-down copy there dropped the chain and the entries until 2026-09-23, so a
 /// recovered Journey restarted its depth at zero and the chain limit forgot
 /// every link before the restart (open-problems.md, problem 25, row a).
+///
+/// Its identity, its chain and its history are private and read through
+/// accessors: [`Journey::following`] is the only way a chain grows and
+/// [`Journey::append`] and [`Journey::holding`] the only ways its history
+/// does, and the type holds that rather than a comment. Its state and the
+/// Xmip Process it is in are the runtime's to set.
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct Journey {
-    pub journey_id: JourneyId,
+    journey_id: JourneyId,
 
     pub state: JourneyState,
 
@@ -109,27 +115,27 @@ pub struct Journey {
     /// Known limit: this names the causing Journey, not the causing event. A
     /// Journey that publishes twice leaves a successor able to say which
     /// Journey started it and not which publication within it.
-    pub previous_journey_id: Option<JourneyId>,
+    previous_journey_id: Option<JourneyId>,
 
     /// Why this Journey exists, where something caused it.
     ///
     /// `previous_journey_id` says which Journey; this says which Subscription
     /// matched and which Xmip Process it started. A Journey that nothing caused
     /// has neither. ADR-0026.
-    pub cause: Option<ChainCause>,
+    cause: Option<ChainCause>,
 
     /// How many links back to a Journey that nothing caused.
     ///
     /// Zero for a Journey that arrived from outside Xmip. One more than its
     /// predecessor for every Journey a Publication caused, which is what
     /// [`ChainLimit`] is compared against before the link is made. ADR-0026.
-    pub depth: u32,
+    depth: u32,
 
     pub current_xmip_process: Option<String>,
 
-    pub entries: Vec<JourneyEntry>,
+    entries: Vec<JourneyEntry>,
 
-    pub messages: Vec<JourneyMessageRef>,
+    messages: Vec<JourneyMessageRef>,
 }
 
 impl Journey {
@@ -187,6 +193,41 @@ impl Journey {
         })
     }
 
+    #[must_use]
+    pub const fn journey_id(&self) -> JourneyId {
+        self.journey_id
+    }
+
+    /// The Journey this one came from, if any.
+    #[must_use]
+    pub const fn previous_journey_id(&self) -> Option<JourneyId> {
+        self.previous_journey_id
+    }
+
+    /// Why this Journey exists, where something caused it.
+    #[must_use]
+    pub const fn cause(&self) -> Option<&ChainCause> {
+        self.cause.as_ref()
+    }
+
+    /// How many links back to a Journey that nothing caused.
+    #[must_use]
+    pub const fn depth(&self) -> u32 {
+        self.depth
+    }
+
+    /// What happened, in order.
+    #[must_use]
+    pub fn entries(&self) -> &[JourneyEntry] {
+        &self.entries
+    }
+
+    /// The Message generations this Journey has held, in order.
+    #[must_use]
+    pub fn messages(&self) -> &[JourneyMessageRef] {
+        &self.messages
+    }
+
     /// Append what happened and move to the state it left the Journey in.
     #[must_use]
     pub fn append(mut self, entry: JourneyEntry, state: JourneyState) -> Self {
@@ -212,7 +253,7 @@ mod tests {
         let journey = Journey::new(JourneyId::new(1));
 
         assert_eq!(journey.state, JourneyState::Active);
-        assert!(journey.previous_journey_id.is_none());
+        assert!(journey.previous_journey_id().is_none());
         assert!(!journey.state.is_terminal());
     }
 
@@ -231,8 +272,8 @@ mod tests {
         let first = Journey::new(JourneyId::new(1));
         let second = caused_by(&first, 2);
 
-        assert_eq!(second.previous_journey_id, Some(first.journey_id));
-        assert_eq!(second.cause, Some(ChainCause::subscription("billing")));
+        assert_eq!(second.previous_journey_id(), Some(first.journey_id()));
+        assert_eq!(second.cause(), Some(&ChainCause::subscription("billing")));
     }
 
     #[test]
@@ -245,20 +286,20 @@ mod tests {
         assert!(
             journeys
                 .iter()
-                .all(|j| j.previous_journey_id == Some(first.journey_id))
+                .all(|j| j.previous_journey_id() == Some(first.journey_id()))
         );
 
         // Siblings, not a deepening chain. Three matches of one Publication
         // are all one link from the Journey that published.
-        assert!(journeys.iter().all(|j| j.depth == 1));
+        assert!(journeys.iter().all(|j| j.depth() == 1));
     }
 
     #[test]
     fn a_journey_that_arrived_from_outside_is_at_depth_zero() {
         let journey = Journey::new(JourneyId::new(1));
 
-        assert_eq!(journey.depth, 0);
-        assert!(journey.cause.is_none());
+        assert_eq!(journey.depth(), 0);
+        assert!(journey.cause().is_none());
     }
 
     #[test]
@@ -269,7 +310,7 @@ mod tests {
             journey = caused_by(&journey, id);
         }
 
-        assert_eq!(journey.depth, 10);
+        assert_eq!(journey.depth(), 10);
     }
 
     #[test]
@@ -297,7 +338,7 @@ mod tests {
 
         assert_eq!(refused.depth, 2);
         assert_eq!(refused.limit, limit);
-        assert_eq!(refused.previous_journey_id, journey.journey_id);
+        assert_eq!(refused.previous_journey_id, journey.journey_id());
         assert_eq!(refused.cause.subscription_id, "billing");
         assert_eq!(refused.cause.xmip_process.as_deref(), Some("Approval"));
     }
