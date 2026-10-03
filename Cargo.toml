@@ -12,10 +12,10 @@ repository = "https://github.com/IlleNilsson/xmip-core-journey"
 description = "Journey state, lineage and append-only execution history for Xmip."
 
 [dependencies]
-# A Journey's state is what xmip-core-persist writes down; the derive lives
-# with the type rather than on a copy of it in persist (ADR-0044).
-serde = { version = "1", features = ["derive"] }
 xcore = { package = "xmip-core", git = "https://github.com/IlleNilsson/xmip-core", branch = "main" }
+# A Journey's one binary form, what the Ledger keeps (`record`): written and
+# read over the estate's one byte writer and cursor.
+codec = { package = "xmip-core-library-codec", git = "https://github.com/IlleNilsson/xmip-core-library-codec", branch = "main" }
 
 [profile.dev.package."*"]
 opt-level = 3

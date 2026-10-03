@@ -8,10 +8,10 @@
 //! right.
 
 pub mod chain;
+pub mod record;
 
 pub use chain::{ChainCause, ChainLimit, ChainRefused};
 
-use serde::{Deserialize, Serialize};
 use xcore::{ExecutionId, JourneyId, MessageId, StreamId};
 
 /// The operational state of a Journey.
@@ -27,11 +27,7 @@ use xcore::{ExecutionId, JourneyId, MessageId, StreamId};
 /// `Paused`, `Dead` — which `runtime-model.md` section 23 retired. `Created`
 /// has no successor on purpose: a Journey exists only after Validation, so
 /// there is nothing for it to be created in.
-///
-/// Serialised in kebab-case, the form `xmip-core-persist` wrote for its own
-/// copy of the first six variants until 2026-09-14 (ADR-0044).
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "kebab-case")]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum JourneyState {
     Active,
     Waiting,
@@ -64,7 +60,7 @@ impl JourneyState {
 }
 
 /// One thing that happened, in order.
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct JourneyEntry {
     pub execution_id: ExecutionId,
     pub message_id: MessageId,
@@ -74,7 +70,7 @@ pub struct JourneyEntry {
 }
 
 /// One Message generation this Journey has held.
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct JourneyMessageRef {
     pub message_id: MessageId,
     pub stream_id: StreamId,
@@ -86,17 +82,18 @@ pub struct JourneyMessageRef {
 /// historical record is appended to and never rewritten. The Streams it refers
 /// to never change at all.
 ///
-/// Serialisable because it is what `xmip-core-persist` writes down, whole: a
-/// cut-down copy there dropped the chain and the entries until 2026-09-23, so a
-/// recovered Journey restarted its depth at zero and the chain limit forgot
-/// every link before the restart (open-problems.md, problem 25, row a).
+/// It is kept whole, in its one binary form ([`record`]), the body of Xmip
+/// Storage's Journey record: a cut-down copy dropped the chain and the
+/// entries until 2026-09-23, so a recovered Journey restarted its depth at
+/// zero and the chain limit forgot every link before the restart
+/// (open-problems.md, problem 25, row a).
 ///
 /// Its identity, its chain and its history are private and read through
 /// accessors: [`Journey::following`] is the only way a chain grows and
 /// [`Journey::append`] and [`Journey::holding`] the only ways its history
 /// does, and the type holds that rather than a comment. Its state and the
 /// Xmip Process it is in are the runtime's to set.
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Journey {
     journey_id: JourneyId,
 
@@ -151,6 +148,19 @@ impl Journey {
             current_xmip_process: None,
             entries: Vec::new(),
             messages: Vec::new(),
+        }
+    }
+
+    /// A Journey a Publication opened for the Subscription that matched it,
+    /// where the Message came from outside Xmip: depth zero, nothing before
+    /// it, and `cause` naming the Subscription and the Xmip Process it
+    /// starts — one per matched Subscription (`runtime-model.md` section 9).
+    /// A Journey caused by another is [`Journey::following`]'s.
+    #[must_use]
+    pub fn matched(journey_id: JourneyId, cause: ChainCause) -> Self {
+        Self {
+            cause: Some(cause),
+            ..Self::new(journey_id)
         }
     }
 
@@ -292,6 +302,15 @@ mod tests {
         // Siblings, not a deepening chain. Three matches of one Publication
         // are all one link from the Journey that published.
         assert!(journeys.iter().all(|j| j.depth() == 1));
+    }
+
+    #[test]
+    fn a_matched_journey_names_its_subscription_at_depth_zero() {
+        let journey = Journey::matched(JourneyId::new(1), ChainCause::subscription("billing"));
+
+        assert_eq!(journey.depth(), 0);
+        assert!(journey.previous_journey_id().is_none());
+        assert_eq!(journey.cause(), Some(&ChainCause::subscription("billing")));
     }
 
     #[test]

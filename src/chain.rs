@@ -18,7 +18,6 @@
 
 use core::fmt;
 
-use serde::{Deserialize, Serialize};
 use xcore::JourneyId;
 
 /// How deep a publication chain may run.
@@ -70,7 +69,7 @@ impl Default for ChainLimit {
 /// The Subscription that matched, and the Xmip Process it started where it
 /// started one. Both halves are what an operator needs to see a loop, and
 /// neither is recoverable from a Journey id.
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ChainCause {
     pub subscription_id: String,
     pub xmip_process: Option<String>,

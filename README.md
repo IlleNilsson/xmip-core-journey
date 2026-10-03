@@ -15,7 +15,16 @@ Its identity, its chain back to the Journey that caused it — the previous
 Journey, the cause and the depth — and its history are private and read
 through accessors: `Journey::following` is the only way a chain grows, and
 `append` and `holding` the only ways its history does, so the chain limit of
-ADR-0026 is held by the type. A timestamp is nanoseconds since the Unix
+ADR-0026 is held by the type. `Journey::matched` is the Journey a Publication
+opens for a Subscription that matched a Message from outside Xmip: depth zero,
+its cause that Subscription.
+
+A Journey's one binary form, what the Ledger keeps as the body of Xmip
+Storage's Journey record, is here with the type (`record`): `Journey::record`
+writes it — the form's number and every field in its order, identifiers and
+times as 16 bytes, counts as varints, text counted — and `Journey::from_record`
+reads it back. Binary, not JSON: the estate keeps no JSON at rest (ADR-0031
+clause 3), and a Journey is written at every step. A timestamp is nanoseconds since the Unix
 epoch, the unit of `xcore::Clock`.
 
 ADR-0013 governs the Journey and its states; `doc/architecture/runtime-model.md`
