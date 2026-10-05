@@ -19,6 +19,13 @@ ADR-0026 is held by the type. `Journey::matched` is the Journey a Publication
 opens for a Subscription that matched a Message from outside Xmip: depth zero,
 its cause that Subscription.
 
+A Journey that leads to a Send Port names it (`send_port`): one Journey per
+Send Port, each Port of a Send Port Group its own (`runtime-model.md`
+section 10). Its retry history there is `attempts` (`Attempts`): the active
+Send Location by its place in the Port's order and how often it was tried,
+written with every hand-on so a retry's count survives a restart (built
+2026-10-04).
+
 A Journey's one binary form, what the Ledger keeps as the body of Xmip
 Storage's Journey record, is here with the type (`record`): `Journey::record`
 writes it — the form's number and every field in its order, identifiers and

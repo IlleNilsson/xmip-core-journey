@@ -21,10 +21,10 @@ use codec::field::{many, optional, place, placed, read_many, read_optional, read
 use codec::writer::ByteWriter;
 use xcore::{ExecutionId, JourneyId, MessageId, StreamId};
 
-use crate::{ChainCause, Journey, JourneyEntry, JourneyMessageRef, JourneyState};
+use crate::{Attempts, ChainCause, Journey, JourneyEntry, JourneyMessageRef, JourneyState};
 
 /// The form's number, the first byte of every record written in it.
-pub const FORM: u8 = 1;
+pub const FORM: u8 = 2;
 
 impl Journey {
     /// The Journey in its one binary form.
@@ -42,6 +42,9 @@ impl Journey {
         });
         out.varint(u64::from(self.depth));
         optional(&mut out, self.current_xmip_process.as_deref(), text);
+        optional(&mut out, self.send_port.as_deref(), text);
+        out.varint(u64::from(self.attempts.location))
+            .varint(u64::from(self.attempts.tries));
         many(&mut out, &self.entries, |out, entry| {
             out.u128_be(entry.execution_id.value())
                 .u128_be(entry.message_id.value());
@@ -82,6 +85,15 @@ impl Journey {
         let depth = u32::try_from(cursor.varint()?)
             .map_err(|_| CodecError::new("a Journey's depth past u32"))?;
         let current_xmip_process = read_optional(&mut cursor, read_text)?;
+        let send_port = read_optional(&mut cursor, read_text)?;
+        let counted = |cursor: &mut Cursor<'_>, what: &str| {
+            u32::try_from(cursor.varint()?)
+                .map_err(|_| CodecError::new(format!("a Journey's {what} past u32")))
+        };
+        let attempts = Attempts {
+            location: counted(&mut cursor, "Send Location")?,
+            tries: counted(&mut cursor, "tries")?,
+        };
         let entries = read_many(&mut cursor, |c| {
             Ok(JourneyEntry {
                 execution_id: ExecutionId::new(c.u128_be()?),
@@ -107,6 +119,8 @@ impl Journey {
             cause,
             depth,
             current_xmip_process,
+            send_port,
+            attempts,
             entries,
             messages,
         })
@@ -154,7 +168,26 @@ mod tests {
             JourneyState::Waiting,
         );
         journey.current_xmip_process = Some("Approval".to_string());
+        journey.send_port = Some("Billing".to_string());
+        journey.attempts = Attempts {
+            location: 1,
+            tries: 300,
+        };
         journey
+    }
+
+    #[test]
+    fn a_journey_keeps_its_send_port_and_its_retry_history() {
+        let read = Journey::from_record(&travelled().record()).expect("read");
+        assert_eq!(read.send_port.as_deref(), Some("Billing"));
+        assert_eq!(
+            read.attempts,
+            Attempts {
+                location: 1,
+                tries: 300
+            },
+            "a retry's count survives the Ledger"
+        );
     }
 
     #[test]
@@ -213,7 +246,7 @@ mod tests {
         let mut other_form = record.clone();
         other_form[0] = FORM + 1;
         let refused = Journey::from_record(&other_form).expect_err("another form");
-        assert!(refused.message.contains("form 2"), "{refused}");
+        assert!(refused.message.contains("form 3"), "{refused}");
         let mut no_state = record;
         no_state[17] = 9;
         assert!(Journey::from_record(&no_state).is_err());
