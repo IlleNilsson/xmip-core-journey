@@ -7,9 +7,11 @@
 //! repository had the vocabulary that ADR-0013 settled. Neither was wholesale
 //! right.
 
+pub mod attempts;
 pub mod chain;
 pub mod record;
 
+pub use attempts::Attempts;
 pub use chain::{ChainCause, ChainLimit, ChainRefused};
 
 use xcore::{ExecutionId, JourneyId, MessageId, StreamId};
@@ -130,6 +132,14 @@ pub struct Journey {
 
     pub current_xmip_process: Option<String>,
 
+    /// The Send Port it leads to, where it leads to one: one Journey per
+    /// Send Port, each Port of a Send Port Group its own
+    /// (`runtime-model.md` section 10).
+    pub send_port: Option<String>,
+
+    /// Its retry history at that Send Port.
+    pub attempts: Attempts,
+
     entries: Vec<JourneyEntry>,
 
     messages: Vec<JourneyMessageRef>,
@@ -146,6 +156,8 @@ impl Journey {
             cause: None,
             depth: 0,
             current_xmip_process: None,
+            send_port: None,
+            attempts: Attempts::default(),
             entries: Vec::new(),
             messages: Vec::new(),
         }
