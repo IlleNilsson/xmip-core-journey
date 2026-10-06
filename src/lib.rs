@@ -94,7 +94,7 @@ pub struct JourneyMessageRef {
 /// accessors: [`Journey::following`] is the only way a chain grows and
 /// [`Journey::append`] and [`Journey::holding`] the only ways its history
 /// does, and the type holds that rather than a comment. Its state and the
-/// Xmip Process it is in are the runtime's to set.
+/// Work Process it is in are the runtime's to set.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Journey {
     journey_id: JourneyId,
@@ -119,7 +119,7 @@ pub struct Journey {
     /// Why this Journey exists, where something caused it.
     ///
     /// `previous_journey_id` says which Journey; this says which Subscription
-    /// matched and which Xmip Process it started. A Journey that nothing caused
+    /// matched and which Work Process it started. A Journey that nothing caused
     /// has neither. ADR-0026.
     cause: Option<ChainCause>,
 
@@ -130,7 +130,7 @@ pub struct Journey {
     /// [`ChainLimit`] is compared against before the link is made. ADR-0026.
     depth: u32,
 
-    pub current_xmip_process: Option<String>,
+    pub current_work_process: Option<String>,
 
     /// The Send Port it leads to, where it leads to one: one Journey per
     /// Send Port, each Port of a Send Port Group its own
@@ -155,7 +155,7 @@ impl Journey {
             previous_journey_id: None,
             cause: None,
             depth: 0,
-            current_xmip_process: None,
+            current_work_process: None,
             send_port: None,
             attempts: Attempts::default(),
             entries: Vec::new(),
@@ -165,7 +165,7 @@ impl Journey {
 
     /// A Journey a Publication opened for the Subscription that matched it,
     /// where the Message came from outside Xmip: depth zero, nothing before
-    /// it, and `cause` naming the Subscription and the Xmip Process it
+    /// it, and `cause` naming the Subscription and the Work Process it
     /// starts — one per matched Subscription (`runtime-model.md` section 9).
     /// A Journey caused by another is [`Journey::following`]'s.
     #[must_use]
@@ -191,7 +191,7 @@ impl Journey {
     /// # Errors
     ///
     /// [`ChainRefused`] when `previous` is already at the limit, naming the
-    /// Subscription and the Xmip Process that would have formed the next link.
+    /// Subscription and the Work Process that would have formed the next link.
     pub fn following(
         journey_id: JourneyId,
         previous: &Self,
@@ -371,7 +371,7 @@ mod tests {
         assert_eq!(refused.limit, limit);
         assert_eq!(refused.previous_journey_id, journey.journey_id());
         assert_eq!(refused.cause.subscription_id, "billing");
-        assert_eq!(refused.cause.xmip_process.as_deref(), Some("Approval"));
+        assert_eq!(refused.cause.work_process.as_deref(), Some("Approval"));
     }
 
     #[test]

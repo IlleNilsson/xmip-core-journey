@@ -38,10 +38,10 @@ impl Journey {
         });
         optional(&mut out, self.cause.as_ref(), |out, cause| {
             text(out, &cause.subscription_id);
-            optional(out, cause.xmip_process.as_deref(), text);
+            optional(out, cause.work_process.as_deref(), text);
         });
         out.varint(u64::from(self.depth));
-        optional(&mut out, self.current_xmip_process.as_deref(), text);
+        optional(&mut out, self.current_work_process.as_deref(), text);
         optional(&mut out, self.send_port.as_deref(), text);
         out.varint(u64::from(self.attempts.location))
             .varint(u64::from(self.attempts.tries));
@@ -79,12 +79,12 @@ impl Journey {
         let cause = read_optional(&mut cursor, |c| {
             Ok(ChainCause {
                 subscription_id: read_text(c)?,
-                xmip_process: read_optional(c, read_text)?,
+                work_process: read_optional(c, read_text)?,
             })
         })?;
         let depth = u32::try_from(cursor.varint()?)
             .map_err(|_| CodecError::new("a Journey's depth past u32"))?;
-        let current_xmip_process = read_optional(&mut cursor, read_text)?;
+        let current_work_process = read_optional(&mut cursor, read_text)?;
         let send_port = read_optional(&mut cursor, read_text)?;
         let counted = |cursor: &mut Cursor<'_>, what: &str| {
             u32::try_from(cursor.varint()?)
@@ -118,7 +118,7 @@ impl Journey {
             previous_journey_id,
             cause,
             depth,
-            current_xmip_process,
+            current_work_process,
             send_port,
             attempts,
             entries,
@@ -167,7 +167,7 @@ mod tests {
             },
             JourneyState::Waiting,
         );
-        journey.current_xmip_process = Some("Approval".to_string());
+        journey.current_work_process = Some("Approval".to_string());
         journey.send_port = Some("Billing".to_string());
         journey.attempts = Attempts {
             location: 1,
