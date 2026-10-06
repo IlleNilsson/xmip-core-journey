@@ -66,13 +66,13 @@ impl Default for ChainLimit {
 
 /// Why one Journey caused another.
 ///
-/// The Subscription that matched, and the Xmip Process it started where it
+/// The Subscription that matched, and the Work Process it started where it
 /// started one. Both halves are what an operator needs to see a loop, and
 /// neither is recoverable from a Journey id.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ChainCause {
     pub subscription_id: String,
-    pub xmip_process: Option<String>,
+    pub work_process: Option<String>,
 }
 
 impl ChainCause {
@@ -81,27 +81,27 @@ impl ChainCause {
     pub fn subscription(subscription_id: impl Into<String>) -> Self {
         Self {
             subscription_id: subscription_id.into(),
-            xmip_process: None,
+            work_process: None,
         }
     }
 
-    /// A Subscription that matched and started an Xmip Process.
+    /// A Subscription that matched and started a Work Process.
     #[must_use]
-    pub fn process(subscription_id: impl Into<String>, xmip_process: impl Into<String>) -> Self {
+    pub fn process(subscription_id: impl Into<String>, work_process: impl Into<String>) -> Self {
         Self {
             subscription_id: subscription_id.into(),
-            xmip_process: Some(xmip_process.into()),
+            work_process: Some(work_process.into()),
         }
     }
 }
 
 impl fmt::Display for ChainCause {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match &self.xmip_process {
+        match &self.work_process {
             Some(process) => {
                 write!(
                     formatter,
-                    "Subscription '{}' starting Xmip Process '{}'",
+                    "Subscription '{}' starting Work Process '{}'",
                     self.subscription_id, process
                 )
             }
@@ -171,7 +171,7 @@ mod tests {
 
         assert_eq!(
             cause.to_string(),
-            "Subscription 'billing' starting Xmip Process 'Approval'"
+            "Subscription 'billing' starting Work Process 'Approval'"
         );
     }
 
@@ -180,7 +180,7 @@ mod tests {
         let cause = ChainCause::subscription("billing");
 
         assert_eq!(cause.to_string(), "Subscription 'billing'");
-        assert!(cause.xmip_process.is_none());
+        assert!(cause.work_process.is_none());
     }
 
     #[test]
@@ -196,6 +196,6 @@ mod tests {
 
         assert!(said.contains("depth 4 of 4"));
         assert!(said.contains("Subscription 'billing'"));
-        assert!(said.contains("Xmip Process 'Approval'"));
+        assert!(said.contains("Work Process 'Approval'"));
     }
 }

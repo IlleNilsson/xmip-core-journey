@@ -8,7 +8,7 @@ before it.
 A Journey is a line, not a tree: a Publication produces one Journey per
 matched Subscription, and a Journey exists only after Validation. It references
 Messages and never the reverse, because one Message may belong to several
-Journeys. It is not the Message, not the Stream and not the Xmip Process that
+Journeys. It is not the Message, not the Stream and not the Work Process that
 runs inside it.
 
 Its identity, its chain back to the Journey that caused it — the previous
