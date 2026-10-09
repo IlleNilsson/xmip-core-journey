@@ -127,6 +127,16 @@ impl Journey {
     }
 }
 
+impl JourneyState {
+    /// Its number in the Journey's one binary form: what Xmip Storage's
+    /// `journey.state` column keeps, so a state is searched by the number
+    /// it is written under, numbered once.
+    #[must_use]
+    pub fn number(self) -> u8 {
+        place(&STATES, &self)
+    }
+}
+
 /// Every state, in the order the form numbers them, which only grows at its
 /// end.
 const STATES: [JourneyState; 7] = [
