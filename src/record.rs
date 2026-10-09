@@ -128,12 +128,25 @@ impl Journey {
 }
 
 impl JourneyState {
-    /// Its number in the Journey's one binary form: what Xmip Storage's
-    /// `journey.state` column keeps, so a state is searched by the number
-    /// it is written under, numbered once.
+    /// Its word, as the enum names it: what Xmip Storage's `journey.state`
+    /// column keeps, and what a search asks it by.
     #[must_use]
-    pub fn number(self) -> u8 {
-        place(&STATES, &self)
+    pub const fn word(self) -> &'static str {
+        match self {
+            Self::Active => "Active",
+            Self::Waiting => "Waiting",
+            Self::Suspended => "Suspended",
+            Self::Recovering => "Recovering",
+            Self::Completed => "Completed",
+            Self::Failed => "Failed",
+            Self::Dismissed => "Dismissed",
+        }
+    }
+
+    /// The state `word` names, as [`JourneyState::word`] writes it.
+    #[must_use]
+    pub fn worded(word: &str) -> Option<Self> {
+        STATES.into_iter().find(|state| state.word() == word)
     }
 }
 
@@ -260,5 +273,14 @@ mod tests {
         let mut no_state = record;
         no_state[17] = 9;
         assert!(Journey::from_record(&no_state).is_err());
+    }
+
+    #[test]
+    fn every_state_s_word_is_its_variant_s_name_and_names_it_back() {
+        for state in STATES {
+            assert_eq!(JourneyState::worded(state.word()), Some(state));
+        }
+        assert_eq!(JourneyState::Completed.word(), "Completed");
+        assert_eq!(JourneyState::worded("completed"), None);
     }
 }
