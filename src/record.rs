@@ -167,7 +167,7 @@ mod tests {
     use super::*;
     use crate::ChainLimit;
 
-    fn travelled() -> Journey {
+    fn traveled() -> Journey {
         let first = Journey::new(JourneyId::new(1));
         let mut journey = Journey::following(
             JourneyId::new(0x0199_0000_0000_7000_8000_0000_0000_0002),
@@ -201,7 +201,7 @@ mod tests {
 
     #[test]
     fn a_journey_keeps_its_send_port_and_its_retry_history() {
-        let read = Journey::from_record(&travelled().record()).expect("read");
+        let read = Journey::from_record(&traveled().record()).expect("read");
         assert_eq!(read.send_port.as_deref(), Some("Billing"));
         assert_eq!(
             read.attempts,
@@ -215,7 +215,7 @@ mod tests {
 
     #[test]
     fn a_journey_comes_back_from_its_record_as_it_was() {
-        for journey in [Journey::new(JourneyId::new(5)), travelled()] {
+        for journey in [Journey::new(JourneyId::new(5)), traveled()] {
             let record = journey.record();
             assert_eq!(record[0], FORM);
             assert_eq!(Journey::from_record(&record).expect("read"), journey);
@@ -260,7 +260,7 @@ mod tests {
 
     #[test]
     fn bytes_that_are_not_a_record_are_refused() {
-        let record = travelled().record();
+        let record = traveled().record();
         for cut in [0, 1, 17, record.len() - 1] {
             assert!(Journey::from_record(&record[..cut]).is_err(), "{cut}");
         }
