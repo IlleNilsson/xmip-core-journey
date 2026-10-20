@@ -21,9 +21,9 @@ use xcore::{ExecutionId, JourneyId, MessageId, StreamId};
 /// Three of these are terminal — `Completed`, `Failed` and `Dismissed` — and
 /// the distinction between the last two is why `Dismissed` exists. A Journey
 /// that failed hit something it could not get past. A Journey that was
-/// dismissed was stopped by a decision: an operator, or a Process recognising
+/// dismissed was stopped by a decision: an operator, or a Process recognizing
 /// a duplicate. Collapsing them means every deliberate stop reads as an error
-/// and every failure count is inflated by correct behaviour.
+/// and every failure count is inflated by correct behavior.
 ///
 /// Replaces the v1.0 set this repository carried — `Created`, `Running`,
 /// `Paused`, `Dead` — which `runtime-model.md` section 23 retired. `Created`
