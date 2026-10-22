@@ -9,10 +9,12 @@
 
 pub mod attempts;
 pub mod chain;
+pub mod received;
 pub mod record;
 
 pub use attempts::Attempts;
 pub use chain::{ChainCause, ChainLimit, ChainRefused};
+pub use received::{Received, Sequenced};
 
 use xcore::{ExecutionId, JourneyId, MessageId, StreamId};
 
@@ -143,6 +145,13 @@ pub struct Journey {
     entries: Vec<JourneyEntry>,
 
     messages: Vec<JourneyMessageRef>,
+
+    /// Where its Stream came in, and the sequences the Stream holds a place
+    /// in end to end; every Journey born from it carries the same.
+    received: Option<Received>,
+
+    /// Its place in the sequence of the point it is at, where it holds one.
+    pub sequence: Option<Sequenced>,
 }
 
 impl Journey {
@@ -160,6 +169,8 @@ impl Journey {
             attempts: Attempts::default(),
             entries: Vec::new(),
             messages: Vec::new(),
+            received: None,
+            sequence: None,
         }
     }
 
@@ -211,6 +222,7 @@ impl Journey {
             previous_journey_id: Some(previous.journey_id),
             cause: Some(cause),
             depth: previous.depth + 1,
+            received: previous.received.clone(),
             ..Self::new(journey_id)
         })
     }
@@ -255,6 +267,19 @@ impl Journey {
     pub fn append(mut self, entry: JourneyEntry, state: JourneyState) -> Self {
         self.entries.push(entry);
         self.state = state;
+        self
+    }
+
+    /// Where its Stream came in, where it knows.
+    #[must_use]
+    pub const fn received(&self) -> Option<&Received> {
+        self.received.as_ref()
+    }
+
+    /// The Journey, its Stream come in as `received` says.
+    #[must_use]
+    pub fn received_as(mut self, received: Received) -> Self {
+        self.received = Some(received);
         self
     }
 
