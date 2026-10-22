@@ -21,10 +21,13 @@ use codec::field::{many, optional, place, placed, read_many, read_optional, read
 use codec::writer::ByteWriter;
 use xcore::{ExecutionId, JourneyId, MessageId, StreamId};
 
-use crate::{Attempts, ChainCause, Journey, JourneyEntry, JourneyMessageRef, JourneyState};
+use crate::{
+    Attempts, ChainCause, Journey, JourneyEntry, JourneyMessageRef, JourneyState, Received,
+    Sequenced,
+};
 
 /// The form's number, the first byte of every record written in it.
-pub const FORM: u8 = 2;
+pub const FORM: u8 = 3;
 
 impl Journey {
     /// The Journey in its one binary form.
@@ -55,6 +58,18 @@ impl Journey {
         many(&mut out, &self.messages, |out, held| {
             out.u128_be(held.message_id.value())
                 .u128_be(held.stream_id.value());
+        });
+        optional(&mut out, self.received.as_ref(), |out, received| {
+            text(out, &received.location);
+            text(out, &received.port);
+            out.u128_be(received.origin);
+            many(out, &received.sequences, |out, queue| {
+                out.u128_be(*queue);
+            });
+            out.byte(u8::from(received.skips));
+        });
+        optional(&mut out, self.sequence, |out, sequenced| {
+            out.u128_be(sequenced.queue).byte(u8::from(sequenced.skips));
         });
         out
     }
@@ -109,6 +124,21 @@ impl Journey {
                 stream_id: StreamId::new(c.u128_be()?),
             })
         })?;
+        let received = read_optional(&mut cursor, |c| {
+            Ok(Received {
+                location: read_text(c)?,
+                port: read_text(c)?,
+                origin: c.u128_be()?,
+                sequences: read_many(c, Cursor::u128_be)?,
+                skips: c.byte()? != 0,
+            })
+        })?;
+        let sequence = read_optional(&mut cursor, |c| {
+            Ok(Sequenced {
+                queue: c.u128_be()?,
+                skips: c.byte()? != 0,
+            })
+        })?;
         if !cursor.is_empty() {
             return Err(CodecError::new("bytes after the Journey record"));
         }
@@ -123,6 +153,8 @@ impl Journey {
             attempts,
             entries,
             messages,
+            received,
+            sequence,
         })
     }
 }
@@ -168,7 +200,13 @@ mod tests {
     use crate::ChainLimit;
 
     fn traveled() -> Journey {
-        let first = Journey::new(JourneyId::new(1));
+        let first = Journey::new(JourneyId::new(1)).received_as(Received {
+            location: "OrdersIn".to_string(),
+            port: "Orders".to_string(),
+            origin: 5,
+            sequences: vec![11, 12],
+            skips: true,
+        });
         let mut journey = Journey::following(
             JourneyId::new(0x0199_0000_0000_7000_8000_0000_0000_0002),
             &first,
@@ -203,6 +241,13 @@ mod tests {
     fn a_journey_keeps_its_send_port_and_its_retry_history() {
         let read = Journey::from_record(&traveled().record()).expect("read");
         assert_eq!(read.send_port.as_deref(), Some("Billing"));
+        let received = read
+            .received()
+            .expect("a Journey following one keeps where it came in");
+        assert_eq!(
+            (received.origin, received.sequences.as_slice()),
+            (5, &[11, 12][..])
+        );
         assert_eq!(
             read.attempts,
             Attempts {
