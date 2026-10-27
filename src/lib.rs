@@ -150,8 +150,10 @@ pub struct Journey {
     /// in end to end; every Journey born from it carries the same.
     received: Option<Received>,
 
-    /// Its place in the sequence of the point it is at, where it holds one.
-    pub sequence: Option<Sequenced>,
+    /// Its places in the sequences of the point it is at — its Send Port's
+    /// and those of the Send Locations it may leave by, or its Work
+    /// Process's — each where that point names a correlation set.
+    pub sequences: Vec<Sequenced>,
 }
 
 impl Journey {
@@ -170,7 +172,7 @@ impl Journey {
             entries: Vec::new(),
             messages: Vec::new(),
             received: None,
-            sequence: None,
+            sequences: Vec::new(),
         }
     }
 
