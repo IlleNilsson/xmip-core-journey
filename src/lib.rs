@@ -14,7 +14,7 @@ pub mod record;
 
 pub use attempts::Attempts;
 pub use chain::{ChainCause, ChainLimit, ChainRefused};
-pub use received::{Received, Sequenced};
+pub use received::{GroupDelivery, Received, Sequenced};
 
 use xcore::{ExecutionId, JourneyId, MessageId, StreamId};
 
@@ -154,6 +154,10 @@ pub struct Journey {
     /// and those of the Send Locations it may leave by, or its Work
     /// Process's — each where that point names a Correlation.
     pub sequences: Vec<Sequenced>,
+
+    /// Its part in a delivery by a Send Port Group naming a Correlation,
+    /// where it is one.
+    pub group: Option<GroupDelivery>,
 }
 
 impl Journey {
@@ -173,6 +177,7 @@ impl Journey {
             messages: Vec::new(),
             received: None,
             sequences: Vec::new(),
+            group: None,
         }
     }
 
