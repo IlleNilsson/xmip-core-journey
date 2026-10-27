@@ -22,12 +22,12 @@ use codec::writer::ByteWriter;
 use xcore::{ExecutionId, JourneyId, MessageId, StreamId};
 
 use crate::{
-    Attempts, ChainCause, Journey, JourneyEntry, JourneyMessageRef, JourneyState, Received,
-    Sequenced,
+    Attempts, ChainCause, GroupDelivery, Journey, JourneyEntry, JourneyMessageRef, JourneyState,
+    Received, Sequenced,
 };
 
 /// The form's number, the first byte of every record written in it.
-pub const FORM: u8 = 3;
+pub const FORM: u8 = 4;
 
 impl Journey {
     /// The Journey in its one binary form.
@@ -70,6 +70,17 @@ impl Journey {
         });
         many(&mut out, &self.sequences, |out, sequenced| {
             out.u128_be(sequenced.queue).byte(u8::from(sequenced.skips));
+        });
+        optional(&mut out, self.group.as_ref(), |out, group| {
+            text(out, &group.name);
+            out.u128_be(group.delivery);
+            optional(out, group.queue, |out, queue| {
+                out.u128_be(queue);
+            });
+            out.byte(u8::from(group.skips));
+            many(out, &group.members, |out, member| {
+                out.u128_be(*member);
+            });
         });
         out
     }
@@ -139,6 +150,15 @@ impl Journey {
                 skips: c.byte()? != 0,
             })
         })?;
+        let group = read_optional(&mut cursor, |c| {
+            Ok(GroupDelivery {
+                name: read_text(c)?,
+                delivery: c.u128_be()?,
+                queue: read_optional(c, Cursor::u128_be)?,
+                skips: c.byte()? != 0,
+                members: read_many(c, Cursor::u128_be)?,
+            })
+        })?;
         if !cursor.is_empty() {
             return Err(CodecError::new("bytes after the Journey record"));
         }
@@ -155,6 +175,7 @@ impl Journey {
             messages,
             received,
             sequences,
+            group,
         })
     }
 }
@@ -244,6 +265,13 @@ mod tests {
             location: 1,
             tries: 300,
         };
+        journey.group = Some(GroupDelivery {
+            name: "Everyone".to_string(),
+            delivery: 31,
+            queue: Some(32),
+            skips: false,
+            members: vec![0x0199_0000_0000_7000_8000_0000_0000_0002, 33],
+        });
         journey
     }
 
@@ -326,7 +354,10 @@ mod tests {
         let mut other_form = record.clone();
         other_form[0] = FORM + 1;
         let refused = Journey::from_record(&other_form).expect_err("another form");
-        assert!(refused.message.contains("form 3"), "{refused}");
+        assert!(
+            refused.message.contains(&format!("reads form {FORM}")),
+            "{refused}"
+        );
         let mut no_state = record;
         no_state[17] = 9;
         assert!(Journey::from_record(&no_state).is_err());
