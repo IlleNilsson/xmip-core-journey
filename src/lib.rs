@@ -152,7 +152,7 @@ pub struct Journey {
 
     /// Its places in the sequences of the point it is at — its Send Port's
     /// and those of the Send Locations it may leave by, or its Work
-    /// Process's — each where that point names a correlation set.
+    /// Process's — each where that point names a Correlation.
     pub sequences: Vec<Sequenced>,
 }
 

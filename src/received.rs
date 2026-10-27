@@ -31,7 +31,7 @@ pub struct Received {
 
 /// A place a Journey holds in a sequence of the point it is at — its Send
 /// Port's, a Send Location's it may leave by, or its Work Process's, each
-/// naming a correlation set — taken once its Stream heads its own
+/// naming a Correlation — taken once its Stream heads its own
 /// sequences, and let go once it has passed.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Sequenced {
