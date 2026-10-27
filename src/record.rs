@@ -68,7 +68,7 @@ impl Journey {
             });
             out.byte(u8::from(received.skips));
         });
-        optional(&mut out, self.sequence, |out, sequenced| {
+        many(&mut out, &self.sequences, |out, sequenced| {
             out.u128_be(sequenced.queue).byte(u8::from(sequenced.skips));
         });
         out
@@ -133,7 +133,7 @@ impl Journey {
                 skips: c.byte()? != 0,
             })
         })?;
-        let sequence = read_optional(&mut cursor, |c| {
+        let sequences = read_many(&mut cursor, |c| {
             Ok(Sequenced {
                 queue: c.u128_be()?,
                 skips: c.byte()? != 0,
@@ -154,7 +154,7 @@ impl Journey {
             entries,
             messages,
             received,
-            sequence,
+            sequences,
         })
     }
 }
@@ -230,6 +230,16 @@ mod tests {
         );
         journey.current_work_process = Some("Approval".to_string());
         journey.send_port = Some("Billing".to_string());
+        journey.sequences = vec![
+            Sequenced {
+                queue: 21,
+                skips: false,
+            },
+            Sequenced {
+                queue: 22,
+                skips: true,
+            },
+        ];
         journey.attempts = Attempts {
             location: 1,
             tries: 300,
@@ -248,6 +258,8 @@ mod tests {
             (received.origin, received.sequences.as_slice()),
             (5, &[11, 12][..])
         );
+        let places: Vec<(u128, bool)> = read.sequences.iter().map(|s| (s.queue, s.skips)).collect();
+        assert_eq!(places, [(21, false), (22, true)], "every place it holds");
         assert_eq!(
             read.attempts,
             Attempts {
