@@ -29,9 +29,10 @@ pub struct Received {
     pub skips: bool,
 }
 
-/// The place a Journey holds in the sequence of the point it is at — a
-/// Send Port's or a Work Process's that names a correlation set — taken in
-/// the write that brought it there, and let go once it has passed.
+/// A place a Journey holds in a sequence of the point it is at — its Send
+/// Port's, a Send Location's it may leave by, or its Work Process's, each
+/// naming a correlation set — taken once its Stream heads its own
+/// sequences, and let go once it has passed.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Sequenced {
     /// The sequence's queue in the Ledger.
