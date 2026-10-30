@@ -1,5 +1,5 @@
-//! Where a Journey's Stream came in, and the sequences it holds a place in
-//! end to end (ADR-0024 and ADR-0066, amendments 2026-10-22).
+//! Where the Stream of a Journey's Message came in, and the sequences it holds a
+//! place in end to end (ADR-0024 and ADR-0066, amendments 2026-10-22).
 //!
 //! The owner, 2026-10-22: *A default correlation set is its receive
 //! location name. There might be more streams, files, pushing at that
@@ -11,7 +11,7 @@
 //! sequences its Stream holds a place in, so every step can ask whether
 //! that Stream heads them.
 
-/// Where a Journey's Stream came in.
+/// Where the Stream of a Journey's Message came in.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Received {
     /// The Receive Location and its Receive Port.
@@ -23,13 +23,13 @@ pub struct Received {
     /// The sequences the Stream holds a place in, end to end, by their
     /// queues in the Ledger.
     pub sequences: Vec<u128>,
-    /// Whether a Journey of it that failed lets its places go, so the rest
+    /// Whether a Message of it that failed lets its places go, so the rest
     /// pass (`on_failure = "skip"`), where it keeps them until an operator
     /// retries or dismisses it (`block`, the default).
     pub skips: bool,
 }
 
-/// A place a Journey holds in a sequence of the point it is at — its Send
+/// A place a Message holds in a sequence of the point it is at — its Send
 /// Port's, a Send Location's it may leave by, or its Work Process's, each
 /// naming a Correlation — taken once its Stream heads its own
 /// sequences, and let go once it has passed.

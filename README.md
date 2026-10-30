@@ -1,9 +1,10 @@
 # xmip-core-journey
 
-The Journey: one line of execution from a matched Subscription to a terminal
-state, and the record of what happened on it — `JourneyState`, the entries
-appended as it runs, the Messages it references and the link to the Journey
-before it.
+The Journey: metadata on a Message, the record of its travel from a matched
+Subscription to a terminal state and of what happened on it — `JourneyState`,
+the entries appended as the Message travels, the Messages it references and
+the link to the Journey before it. The Message travels; the Journey records
+it and never travels itself (ADR-0013, amendment 2026-10-29).
 
 A Journey is a line, not a tree: a Publication produces one Journey per
 matched Subscription, and a Journey exists only after Validation. It references
@@ -19,7 +20,7 @@ ADR-0026 is held by the type. `Journey::matched` is the Journey a Publication
 opens for a Subscription that matched a Message from outside Xmip: depth zero,
 its cause that Subscription.
 
-A Journey that leads to a Send Port names it (`send_port`): one Journey per
+A Journey whose Message leads to a Send Port names it (`send_port`): one Journey per
 Send Port, each Port of a Send Port Group its own (`runtime-model.md`
 section 10). Its retry history there is `attempts` (`Attempts`): the active
 Send Location by its place in the Port's order and how often it was tried,
