@@ -3,8 +3,9 @@
 The Journey: metadata on a Message, the record of its travel from a matched
 Subscription to a terminal state and of what happened on it — `JourneyState`,
 the entries appended as the Message travels, the Messages it references and
-the link to the Journey before it. The Message travels; the Journey records
-it and never travels itself (ADR-0013, amendment 2026-10-29).
+the link to the Journey before it. The Stream comes first and goes into a
+Message; the Message is handled by its Journey, which records its travel and
+never travels itself (ADR-0013, amendment 2026-10-29).
 
 A Journey is a line, not a tree: a Publication produces one Journey per
 matched Subscription, and a Journey exists only after Validation. It references
