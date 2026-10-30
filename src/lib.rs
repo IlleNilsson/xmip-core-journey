@@ -1,6 +1,6 @@
 #![forbid(unsafe_code)]
 
-//! The Journey: one line of execution, and the record of what happened on it.
+//! The Journey: the record of a Message's travel, and of what happened on it.
 //!
 //! Merged 2026-08-26 from two implementations. This repository had the
 //! structure — `JourneyEntry` and the link to the Journey before — and the root
