@@ -37,5 +37,5 @@ clause 3), and a Journey is written at every step. A timestamp is nanoseconds si
 epoch, the unit of `xcore::Clock`.
 
 ADR-0013 governs the Journey and its states; `doc/architecture/runtime-model.md`
-sections 12 to 14 are state, control and replay. `architecture.toml` carries
+sections 12 to 14 are state, control and replay. `architecture.xmip` carries
 the maturity.
