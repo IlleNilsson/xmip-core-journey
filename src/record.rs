@@ -13,11 +13,15 @@
 //! [`FORM`], so a form that follows can still read what this one wrote.
 //!
 //! One form, here, with the type it writes: Xmip Storage keeps the body as
-//! it is given, byte for byte, and nothing else writes a Journey's.
+//! it is given, byte for byte, and nothing else writes a Journey's. The
+//! fields are the Journey's [`Form`], `xmip-core-library-codec`'s one
+//! binary form; [`Journey::record`] puts the form's number before them
+//! (`codec::form::numbered`).
 
 use codec::CodecError;
 use codec::cursor::Cursor;
 use codec::field::{many, optional, place, placed, read_many, read_optional, read_text, text};
+use codec::form::{Form, from_numbered, numbered};
 use codec::writer::ByteWriter;
 use xcore::{ExecutionId, JourneyId, MessageId, StreamId};
 
@@ -30,58 +34,11 @@ use crate::{
 pub const FORM: u8 = 4;
 
 impl Journey {
-    /// The Journey in its one binary form.
+    /// The Journey in its one binary form, after the form's number.
     #[must_use]
     pub fn record(&self) -> Vec<u8> {
         let mut out = Vec::with_capacity(64 + 64 * self.entries.len());
-        out.byte(FORM).u128_be(self.journey_id.value());
-        out.byte(place(&STATES, &self.state));
-        optional(&mut out, self.previous_journey_id, |out, id| {
-            out.u128_be(id.value());
-        });
-        optional(&mut out, self.cause.as_ref(), |out, cause| {
-            text(out, &cause.subscription_id);
-            optional(out, cause.work_process.as_deref(), text);
-        });
-        out.varint(u64::from(self.depth));
-        optional(&mut out, self.current_work_process.as_deref(), text);
-        optional(&mut out, self.send_port.as_deref(), text);
-        out.varint(u64::from(self.attempts.location))
-            .varint(u64::from(self.attempts.tries));
-        many(&mut out, &self.entries, |out, entry| {
-            out.u128_be(entry.execution_id.value())
-                .u128_be(entry.message_id.value());
-            text(out, &entry.action);
-            text(out, &entry.outcome);
-            out.i128_be(entry.timestamp_unix_nanos);
-        });
-        many(&mut out, &self.messages, |out, held| {
-            out.u128_be(held.message_id.value())
-                .u128_be(held.stream_id.value());
-        });
-        optional(&mut out, self.received.as_ref(), |out, received| {
-            text(out, &received.location);
-            text(out, &received.port);
-            out.u128_be(received.origin);
-            many(out, &received.sequences, |out, queue| {
-                out.u128_be(*queue);
-            });
-            out.byte(u8::from(received.skips));
-        });
-        many(&mut out, &self.sequences, |out, sequenced| {
-            out.u128_be(sequenced.queue).byte(u8::from(sequenced.skips));
-        });
-        optional(&mut out, self.group.as_ref(), |out, group| {
-            text(out, &group.name);
-            out.u128_be(group.delivery);
-            optional(out, group.queue, |out, queue| {
-                out.u128_be(queue);
-            });
-            out.byte(u8::from(group.skips));
-            many(out, &group.members, |out, member| {
-                out.u128_be(*member);
-            });
-        });
+        numbered(&mut out, FORM, self);
         out
     }
 
@@ -92,17 +49,69 @@ impl Journey {
     /// Where the bytes are not one: another form, a field cut short, a
     /// state with no number, text that is not UTF-8, or bytes after it.
     pub fn from_record(bytes: &[u8]) -> Result<Self, CodecError> {
-        let mut cursor = Cursor::new(bytes);
-        let form = cursor.byte()?;
-        if form != FORM {
-            return Err(CodecError::new(format!(
-                "a Journey record of form {form}, and this reads form {FORM}"
-            )));
-        }
+        from_numbered(bytes, FORM, "a Journey record")
+    }
+}
+
+/// The Journey's fields, without the form's number [`Journey::record`]
+/// writes before them.
+impl Form for Journey {
+    fn write(&self, out: &mut Vec<u8>) {
+        out.u128_be(self.journey_id.value());
+        out.byte(place(&STATES, &self.state));
+        optional(out, self.previous_journey_id, |out, id| {
+            out.u128_be(id.value());
+        });
+        optional(out, self.cause.as_ref(), |out, cause| {
+            text(out, &cause.subscription_id);
+            optional(out, cause.work_process.as_deref(), text);
+        });
+        out.varint(u64::from(self.depth));
+        optional(out, self.current_work_process.as_deref(), text);
+        optional(out, self.send_port.as_deref(), text);
+        out.varint(u64::from(self.attempts.location))
+            .varint(u64::from(self.attempts.tries));
+        many(out, &self.entries, |out, entry| {
+            out.u128_be(entry.execution_id.value())
+                .u128_be(entry.message_id.value());
+            text(out, &entry.action);
+            text(out, &entry.outcome);
+            out.i128_be(entry.timestamp_unix_nanos);
+        });
+        many(out, &self.messages, |out, held| {
+            out.u128_be(held.message_id.value())
+                .u128_be(held.stream_id.value());
+        });
+        optional(out, self.received.as_ref(), |out, received| {
+            text(out, &received.location);
+            text(out, &received.port);
+            out.u128_be(received.origin);
+            many(out, &received.sequences, |out, queue| {
+                out.u128_be(*queue);
+            });
+            out.byte(u8::from(received.skips));
+        });
+        many(out, &self.sequences, |out, sequenced| {
+            out.u128_be(sequenced.queue).byte(u8::from(sequenced.skips));
+        });
+        optional(out, self.group.as_ref(), |out, group| {
+            text(out, &group.name);
+            out.u128_be(group.delivery);
+            optional(out, group.queue, |out, queue| {
+                out.u128_be(queue);
+            });
+            out.byte(u8::from(group.skips));
+            many(out, &group.members, |out, member| {
+                out.u128_be(*member);
+            });
+        });
+    }
+
+    fn read(cursor: &mut Cursor<'_>) -> codec::Result<Self> {
         let journey_id = JourneyId::new(cursor.u128_be()?);
         let state = placed(&STATES, cursor.byte()?, "Journey state")?;
-        let previous_journey_id = read_optional(&mut cursor, |c| Ok(JourneyId::new(c.u128_be()?)))?;
-        let cause = read_optional(&mut cursor, |c| {
+        let previous_journey_id = read_optional(cursor, |c| Ok(JourneyId::new(c.u128_be()?)))?;
+        let cause = read_optional(cursor, |c| {
             Ok(ChainCause {
                 subscription_id: read_text(c)?,
                 work_process: read_optional(c, read_text)?,
@@ -110,17 +119,17 @@ impl Journey {
         })?;
         let depth = u32::try_from(cursor.varint()?)
             .map_err(|_| CodecError::new("a Journey's depth past u32"))?;
-        let current_work_process = read_optional(&mut cursor, read_text)?;
-        let send_port = read_optional(&mut cursor, read_text)?;
+        let current_work_process = read_optional(cursor, read_text)?;
+        let send_port = read_optional(cursor, read_text)?;
         let counted = |cursor: &mut Cursor<'_>, what: &str| {
             u32::try_from(cursor.varint()?)
                 .map_err(|_| CodecError::new(format!("a Journey's {what} past u32")))
         };
         let attempts = Attempts {
-            location: counted(&mut cursor, "Send Location")?,
-            tries: counted(&mut cursor, "tries")?,
+            location: counted(cursor, "Send Location")?,
+            tries: counted(cursor, "tries")?,
         };
-        let entries = read_many(&mut cursor, |c| {
+        let entries = read_many(cursor, |c| {
             Ok(JourneyEntry {
                 execution_id: ExecutionId::new(c.u128_be()?),
                 message_id: MessageId::new(c.u128_be()?),
@@ -129,13 +138,13 @@ impl Journey {
                 timestamp_unix_nanos: c.i128_be()?,
             })
         })?;
-        let messages = read_many(&mut cursor, |c| {
+        let messages = read_many(cursor, |c| {
             Ok(JourneyMessageRef {
                 message_id: MessageId::new(c.u128_be()?),
                 stream_id: StreamId::new(c.u128_be()?),
             })
         })?;
-        let received = read_optional(&mut cursor, |c| {
+        let received = read_optional(cursor, |c| {
             Ok(Received {
                 location: read_text(c)?,
                 port: read_text(c)?,
@@ -144,13 +153,13 @@ impl Journey {
                 skips: c.byte()? != 0,
             })
         })?;
-        let sequences = read_many(&mut cursor, |c| {
+        let sequences = read_many(cursor, |c| {
             Ok(Sequenced {
                 queue: c.u128_be()?,
                 skips: c.byte()? != 0,
             })
         })?;
-        let group = read_optional(&mut cursor, |c| {
+        let group = read_optional(cursor, |c| {
             Ok(GroupDelivery {
                 name: read_text(c)?,
                 delivery: c.u128_be()?,
@@ -159,9 +168,6 @@ impl Journey {
                 members: read_many(c, Cursor::u128_be)?,
             })
         })?;
-        if !cursor.is_empty() {
-            return Err(CodecError::new("bytes after the Journey record"));
-        }
         Ok(Self {
             journey_id,
             state,
@@ -296,6 +302,35 @@ mod tests {
             },
             "a retry's count survives the Ledger"
         );
+    }
+
+    /// The bytes a new Journey and `traveled()` are written as, taken from
+    /// the encoder that wrote them before the form was a `Form`
+    /// (2026-11-13): the form may not change.
+    const NEW: &str = "040000000000000000000000000000000500000000000000000000000000";
+    const TRAVELED: &str = concat!(
+        "0401990000000070008000000000000002010100000000000000000000000000000001010762696c",
+        "6c696e670108417070726f76616c010108417070726f76616c010742696c6c696e6701ac02010000",
+        "0000000000000000000000000003000000000000000000000000000000070473656e642373656e74",
+        "20746f2053656e64506f72742e42696c6c696e6720e2809420c3a5c3a4c3b6ffffffffffffffffff",
+        "fffffffffffff4010000000000000000000000000000000700000000000000000000000000000009",
+        "01084f7264657273496e064f72646572730000000000000000000000000000000502000000000000",
+        "0000000000000000000b0000000000000000000000000000000c0102000000000000000000000000",
+        "00000015000000000000000000000000000000001601010845766572796f6e650000000000000000",
+        "000000000000001f0100000000000000000000000000000020000201990000000070008000000000",
+        "00000200000000000000000000000000000021",
+    );
+
+    #[test]
+    fn a_journey_is_written_byte_for_byte_as_its_form_was() {
+        for (journey, golden) in [
+            (Journey::new(JourneyId::new(5)), NEW),
+            (traveled(), TRAVELED),
+        ] {
+            assert_eq!(codec::hex::encode(&journey.record()), golden);
+            let bytes = codec::hex::decode(golden).expect("hex");
+            assert_eq!(Journey::from_record(&bytes).expect("read"), journey);
+        }
     }
 
     #[test]
