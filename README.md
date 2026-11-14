@@ -32,7 +32,9 @@ A Journey's one binary form, what the Ledger keeps as the body of Xmip
 Storage's Journey record, is here with the type (`record`): `Journey::record`
 writes it — the form's number and every field in its order, identifiers and
 times as 16 bytes, counts as varints, text counted — and `Journey::from_record`
-reads it back. Binary, not JSON: the estate keeps no JSON at rest (ADR-0031
+reads it back. The fields are the Journey's `codec::form::Form`,
+`xmip-core-library-codec`'s one binary form, and a test holds the bytes
+written to the ones the form has always written. Binary, not JSON: the estate keeps no JSON at rest (ADR-0031
 clause 3), and a Journey is written at every step. A timestamp is nanoseconds since the Unix
 epoch, the unit of `xcore::Clock`.
 
