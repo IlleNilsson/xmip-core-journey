@@ -1,8 +1,8 @@
 [package]
 name = "xmip-core-journey"
-version = "0.1.0"
-edition = "2024"
-license = "AGPL-3.0-or-later"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
 repository = "https://github.com/IlleNilsson/xmip-core-journey"
 description = "Journey state, lineage and append-only execution history for Xmip."
 
@@ -12,3 +12,5 @@ xcore = { package = "xmip-core", git = "https://github.com/IlleNilsson/xmip-core
 # `codec::form::Form`, written and read over the estate's one byte writer and
 # cursor.
 codec = { package = "xmip-core-library-codec", git = "https://github.com/IlleNilsson/xmip-core-library-codec", branch = "main" }
+
+[lints]
